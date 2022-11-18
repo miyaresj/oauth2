@@ -1,0 +1,3 @@
+<?
+echo "LBCTex<br>";
+?>
