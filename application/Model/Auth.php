@@ -56,6 +56,7 @@ class Auth extends AuthModel
 		$parameters = array(':user_id' => $user_id, ':sec_key' => $sec_key);
 		$query->execute($parameters);
 		$result=$query->fetch();
+
 		if (($result->access_token==0) || ($result->refresh_token==0))
                 {
 			return false;
@@ -64,6 +65,8 @@ class Auth extends AuthModel
 		{
 			return true;
 		}
+
+		return false;
 	}
 
 	public function isOauthSetRef($user_id=0,$url=0)
@@ -83,6 +86,34 @@ class Auth extends AuthModel
 			return true;
 		}
 	}
+
+	public function isOauthSetConf($user_id=0,$config_id=0)
+	{
+
+		$sql = "SELECT LENGTH(access_token) as access_token, LENGTH(refresh_token) as refresh_token from auths where user_id = :user_id and config_id=:config_id";
+		$query = $this->db->prepare($sql);
+		$parameters = array(':user_id' => $user_id, ':config_id' => $config_id);
+		$query->execute($parameters);
+		$result=$query->fetch();
+		if (($result->access_token==0) || ($result->refresh_token==0))
+                {
+			return false;
+		}
+		else
+		{
+			return true;
+		}
+	}
+
+	public function getUserOauthConf($user_id=0,$config_id=0)
+	{
+		$sql = "SELECT A.access_token, A.refresh_token, B.twitch_login, A.id from auths A left join users B on A.user_id=B.id where A.user_id = :user_id and config_id = :config_id";
+		$query = $this->db->prepare($sql);
+		$parameters = array(':user_id' => $user_id, ':config_id' => $config_id);
+		$query->execute($parameters);
+		return $query->fetch();
+	}
+
 
 	public function getUserOauth($user_id=0,$sec_key=0)
 	{

@@ -35,7 +35,7 @@ class TwitchController
 				{
 					$_SESSION['page_target']=substr($_SERVER['REQUEST_URI'],0,strpos($_SERVER['REQUEST_URI'],'?'));
 					$this->getAccessToken($_GET['code']);	// this function assumes this passes
-//					header('Location: ' . $_SESSION['page_target']);
+					header('Location: ' . $_SESSION['page_target']);
 				}
 			}
 
@@ -55,7 +55,14 @@ class TwitchController
 		require("SessionUtil.php");
                 $Auth=new Auth();
 
-		$Auth->clearAccessToken($_SESSION['user_id'],$_SERVER['SERVER_NAME'] . $_SESSION['page_target']);
+/*
+echo $_SERVER['SERVER_NAME'] . substr($_SERVER['REQUEST_URI'],0,strpos($_SERVER['REQUEST_URI'],'/',1)) . '<br>';
+echo $_SERVER['HTTP_HOST'] . '<br>';
+echo $_SERVER['PHP_SELF'] . '<br>';
+exit();
+*/
+
+		$Auth->clearAccessToken($_SESSION['user_id'],$_SERVER['SERVER_NAME'] . substr($_SERVER['REQUEST_URI'],0,strpos($_SERVER['REQUEST_URI'],'/',1)));
 
 		require APP . 'view/_templates/header.php';
 		require APP . 'view/twitch/logout.php';
@@ -76,25 +83,6 @@ class TwitchController
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
 		$response = json_decode(curl_exec($ch));
 		curl_close($ch);
-
-/*
-		$twitchIdInfo=$this->getTwitchId($response->access_token);
-		$twitchLogin=$twitchIdInfo->login;
-		$twitchId=$twitchIdInfo->id;
-*/
-
-//var_dump($response);
-//exit();
-
-/*
-echo $twitch->id . '<br>';
-echo $response->access_token . '<br>';
-echo $response->refresh_token . '<br>';
-echo $_SESSION['user_id'] . '<br>';
-exit();
-*/
-//var_dump($_SESSION);
-//exit();
 echo "storing";
 		$Auth->storeAccessToken($response->access_token,$response->refresh_token,$_GET['state']);
 	}
@@ -104,7 +92,6 @@ echo "storing";
 /*
 	private function validateAccessToken($user_id=0,$sec_key=0)
 	{
-
 		require("SessionUtil.php");
 		$Auth=new Auth();
                 if ($Auth->isOauthSet($_SESSION['user_id']))
@@ -138,6 +125,64 @@ echo "storing";
 		}
 	}
 */
+
+
+
+
+
+
+
+
+
+
+        private function validateAccessToken($user_id=0,$config_id=0)
+        {
+
+//echo $user_id . '<br>';
+//echo $config_id . '<br>';
+//exit();
+                $Auth=new Auth();
+                if ($Auth->isOauthSetConf($user_id,$config_id))
+                {
+                        $authCodes=$Auth->getUserOauthConf($user_id,$config_id);
+
+//var_dump($authCodes);
+//exit();
+
+
+                        $url="https://id.twitch.tv/oauth2/validate";
+                        $ch = curl_init($url);
+                        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+                        curl_setopt($ch, CURLOPT_HTTPHEADER,array('Authorization: OAuth ' . $authCodes->access_token));
+                        $response = json_decode(curl_exec($ch));
+//var_dump($response);
+//exit();
+                        curl_close($ch);
+                        if (array_key_exists('status',$response))
+                        {
+                                if ($response->status=="401")
+                                {
+                                        return $this->refreshAccessToken($user_id);
+                                }
+                        }
+                        else
+                        {
+                                if ($response->expires_in<600)
+                                {
+                                        return $this->refreshAccessToken($user_id);
+                                }
+                        }
+                        return $response->expires_in;
+                }
+                else
+                {
+                        return false;
+                }
+        }
+
+
+
+
 	private function getTwitchId($token)
 	{
 		$Auth=new Auth();
@@ -178,6 +223,8 @@ echo "storing";
 			curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
 			curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($payload));
 			$response = curl_exec($ch);
+var_dump($response);
+exit();
 			$response = json_decode(curl_exec($ch));
 			curl_close($ch);
 			$twitchIdInfo=$this->getTwitchId($response->access_token);
