@@ -7,7 +7,16 @@ use Mini\Core\AuthModel;
 class Auth extends AuthModel
 {
 
-	public function getConfig($url)
+	public function getConfig($user_id=0,$sec_key=0)
+	{
+		$sql = "SELECT A.client_id, A.secret from config A left join auths B on A.id = B.config_id where B.user_id=:user_id and B.sec_key=:sec_key";
+		$query = $this->db->prepare($sql);
+		$parameters = array(':user_id' => $user_id, ':sec_key' => $sec_key);
+		$query->execute($parameters);
+		return $query->fetch();
+	}
+
+	public function getConfigUrl($url)
 	{
 		if (strpos($url,"?"))
 		{
@@ -16,19 +25,6 @@ class Auth extends AuthModel
 		$sql = "SELECT * from config where url=:url";
 		$query = $this->db->prepare($sql);
 		$parameters = array(':url' => $url);
-		$query->execute($parameters);
-		return $query->fetch();
-	}
-
-	public function getConfig2($site)
-	{
-		if (strpos($url,"?"))
-		{
-			$url=substr($url,0,strpos($url,"?"));
-		}
-		$sql = "SELECT * from config where site=:site";
-		$query = $this->db->prepare($sql);
-		$parameters = array(':site' => $site);
 		$query->execute($parameters);
 		return $query->fetch();
 	}
@@ -52,11 +48,12 @@ class Auth extends AuthModel
 		return $query->fetch();
 	}
 
-	public function isOauthSet($id)
+	public function isOauthSet($user_id=0,$sec_key=0)
 	{
-		$sql = "SELECT LENGTH(access_token) as access_token, LENGTH(refresh_token) as refresh_token from users where id = :id";
+
+		$sql = "SELECT LENGTH(access_token) as access_token, LENGTH(refresh_token) as refresh_token from auths where user_id = :user_id and sec_key = :sec_key";
 		$query = $this->db->prepare($sql);
-		$parameters = array(':id' => $id);
+		$parameters = array(':user_id' => $user_id, ':sec_key' => $sec_key);
 		$query->execute($parameters);
 		$result=$query->fetch();
 		if (($result->access_token==0) || ($result->refresh_token==0))
@@ -69,11 +66,32 @@ class Auth extends AuthModel
 		}
 	}
 
-	public function getUserOauth($id)
+	public function isOauthSetRef($user_id=0,$url=0)
 	{
-		$sql = "SELECT access_token, refresh_token, twitch_login, twitch_id from users where id = :id";
+
+		$sql = "SELECT LENGTH(A.access_token) as access_token, LENGTH(A.refresh_token) as refresh_token from auths A left join config B on B.url = :url where A.user_id = :user_id";
 		$query = $this->db->prepare($sql);
-		$parameters = array(':id' => $id);
+		$parameters = array(':user_id' => $user_id, ':url' => $url);
+		$query->execute($parameters);
+		$result=$query->fetch();
+		if (($result->access_token==0) || ($result->refresh_token==0))
+                {
+			return false;
+		}
+		else
+		{
+			return true;
+		}
+	}
+
+	public function getUserOauth($user_id=0,$sec_key=0)
+	{
+//		$sql = "SELECT access_token, refresh_token, twitch_login, twitch_id from users where id = :id";
+//		$sql = "SELECT access_token, refresh_token, twitch_login, twitch_id from auths where id = :id and sec_key = :sec_key";
+
+		$sql = "SELECT A.access_token, A.refresh_token, B.twitch_login, A.id from auths A left join users B on A.user_id=B.id where A.user_id = :user_id and sec_key = :sec_key";
+		$query = $this->db->prepare($sql);
+		$parameters = array(':user_id' => $user_id, ':sec_key' => $sec_key);
 		$query->execute($parameters);
 		return $query->fetch();
 	}
@@ -107,11 +125,17 @@ class Auth extends AuthModel
 		}
 	}
 
-	public function getUserOauthByLogin($twitch_login)
+	public function getUserOauthByLogin($user_id=0,$sec_key=0)
 	{
-		$sql = "SELECT access_token, refresh_token, twitch_login, twitch_id from users where twitch_login = :twitch_login";
+//		if ($PRODV2) {
+//			$sql = "SELECT access_token, refresh_token, twitch_login, twitch_id from users where twitch_login = :twitch_login";
+//		}
+//		else
+//		{
+			$sql = "SELECT A.access_token, A.refresh_token, B.twitch_login, B.twitch_id from auths A left join users B on A.user_id = B.id where A.user_id = :user_id and sec_key = :sec_key";
+//		}
 		$query = $this->db->prepare($sql);
-		$parameters = array(':twitch_login' => $twitch_login);
+		$parameters = array(':user_id' => $user_id, ':sec_key' => $sec_key);
 		$query->execute($parameters);
 		return $query->fetch();
 	}
@@ -135,30 +159,33 @@ class Auth extends AuthModel
 		$query->execute($parameters);
 	}
 
-	public function setStateCode($id)
+	public function setStateCode($user_id=0,$url=0)
 	{
+
+
 		$STATECODE=hash('SHA256',time());
-                $sql = "UPDATE users set statecode='$STATECODE' where id = :id";
+                $sql = "UPDATE auths A left join config B on A.config_id=B.id set A.statecode=:statecode where A.user_id = :user_id and B.url=:url";
+
 		$query = $this->db->prepare($sql);
-		$parameters = array(':id' => $id);
+		$parameters = array(':statecode' => $STATECODE, ':user_id' => $user_id, ':url' => $url);
 		$query->execute($parameters);
 		return $STATECODE;
 	}
 
-	public function checkStateCode($id,$statecode)
+	public function checkStateCode($user_id,$statecode)
 	{
-                $sql = "select statecode from users where id = :id";
+                $sql = "select statecode from auths where user_id = :user_id and statecode=:statecode";
 		$query = $this->db->prepare($sql);
-		$parameters = array(':id' => $id);
+		$parameters = array(':user_id' => $user_id, ':statecode' => $statecode);
 		$query->execute($parameters);
 		return ($query->fetch()->statecode == $statecode);
 	}
 
-	public function storeAccessToken($access_token,$refresh_token,$id,$twitchLogin,$twitch_id)
+	public function storeAccessToken($access_token,$refresh_token,$statecode)
 	{
-                $sql = "update users set access_token=:access_token, refresh_token=:refresh_token, twitch_login=:twitch_login, twitch_id=:twitch_id  where id = :id";
+                $sql = "update auths set access_token=:access_token, refresh_token=:refresh_token where statecode = :statecode";
 		$query = $this->db->prepare($sql);
-		$parameters = array(':access_token' => $access_token, ':refresh_token' => $refresh_token, ':id' => $id, ':twitch_login' => $twitchLogin, ':twitch_id' => $twitch_id);
+		$parameters = array(':access_token' => $access_token, ':refresh_token' => $refresh_token, ':statecode' => $statecode);
 		$query->execute($parameters);
 	}
 
@@ -170,11 +197,13 @@ class Auth extends AuthModel
 		$query->execute($parameters);
 	}
 
-	public function clearAccessToken($id)
+	public function clearAccessToken($user_id=0,$url=0)
 	{
-                $sql = "update users set access_token='', refresh_token='' where id = :id";
+
+		$cfg=$this->getConfigUrl($url);
+                $sql = "update auths A left join config B on A.config_id = B.id set access_token='', refresh_token='' where A.user_id = :user_id and A.config_id = :config_id";
 		$query = $this->db->prepare($sql);
-		$parameters = array(':id' => $id);
+		$parameters = array(':user_id' => $user_id, ':config_id' => $cfg->id);
 		$query->execute($parameters);
 	}
 
@@ -188,7 +217,6 @@ class Auth extends AuthModel
 		$parameters = array(':user_id' => $user_id, ':site' => $site);
 		$query->execute($parameters);
 		$result=$query->fetch();
-//print_r($result);
 		if (!$result) {
 			return false;
 		}

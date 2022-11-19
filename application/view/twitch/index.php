@@ -1,3 +1,4 @@
 <?
-echo $this->validateAccessToken() . " twitch connected";
+//echo $this->validateAccessToken() . " twitch connected";
+echo "twitch connected";
 ?>

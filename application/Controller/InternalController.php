@@ -8,21 +8,23 @@ class InternalController
 {
 	public function index($user_id=0,$sec_key=0)
 	{
-		require("SecurityUtil.php");
-		require APP . 'view/test/index.php';
+//		require("SecurityUtil.php");
+//		require APP . 'view/test/index.php';
+		exit();
 	}
 
 	function getkeys($twitch_login=0,$sec_key=0)
 	{
-		require("SecurityUtil.php");
+//		require("SecurityUtil.php");
 		$Auth=new Auth();
 		$user_id=$Auth->getUserId($twitch_login);
 		if (!$user_id) {
 			exit();
 		}
-		$expires_in=$this->validateAccessToken($user_id);
-		$keys=json_encode($Auth->getUserOauthByLogin($twitch_login));
-		$twitch=$Auth->getConfig("pi4b.lisabadcat.com/twitch");
+
+		$expires_in=$this->validateAccessToken($user_id,$sec_key);
+		$keys=json_encode($Auth->getUserOauthByLogin($user_id,$sec_key));
+		$twitch=$Auth->getConfig($user_id,$sec_key);
 		$keys=json_decode($keys,true);
 		$keys["expires_in"]=$expires_in;
 		$keys["client_id"]=$twitch->client_id;
@@ -50,12 +52,13 @@ class InternalController
 */
 	}
 
-	private function validateAccessToken($user_id=0)
+	private function validateAccessToken($user_id=0,$sec_key=0)
 	{
+
 		$Auth=new Auth();
-                if ($Auth->isOauthSet($user_id))
+                if ($Auth->isOauthSet($user_id,$sec_key))
 		{
-			$authCodes=$Auth->getUserOauth($user_id);
+			$authCodes=$Auth->getUserOauth($user_id,$sec_key);
 			$url="https://id.twitch.tv/oauth2/validate";
 			$ch = curl_init($url);
 			curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
@@ -84,7 +87,7 @@ class InternalController
 		}
 	}
 
-	private function refreshAccessToken($user_id=0)
+	private function refreshAccessToken($user_id=0,$config_id=0)
 	{
 		$Auth=new Auth();
                 if ($Auth->isOauthSet($user_id))

@@ -9,17 +9,17 @@ class TwitchController
 
 	public function index()
 	{
-		require("SessionUtil.php");
+ 		require("SessionUtil.php");
 		$Auth=new Auth();
 		$juser = $Auth->getUserById($_SESSION['user_id']);
 		$twitch=array();
 
-		if (!$Auth->isOauthSet($_SESSION['user_id'])) // oauth not set
+		if (!$Auth->isOauthSetRef($_SESSION['user_id'],$_SERVER['SERVER_NAME'] . $_SERVER['REQUEST_URI'])) // oauth not set
 		{
 			if (!isset($_GET["code"])) // redirect to twitch
 			{
-				$STATECODE=$Auth->setStateCode($_SESSION['user_id']);
-				$twitch=$Auth->getConfig($_SERVER['SERVER_NAME'] . $_SERVER['REQUEST_URI']);
+				$STATECODE=$Auth->setStateCode($_SESSION['user_id'],$_SERVER['SERVER_NAME'] . $_SERVER['REQUEST_URI']);
+				$twitch=$Auth->getConfigUrl($_SERVER['SERVER_NAME'] . $_SERVER['REQUEST_URI']);
 				require APP . 'view/_templates/header.php';
 				require APP . 'view/twitch/login.php';
 				require APP . 'view/_templates/footer.php';
@@ -33,37 +33,39 @@ class TwitchController
 				}
 				else	// State OK, Oauth2 login successful
 				{
-
 					$_SESSION['page_target']=substr($_SERVER['REQUEST_URI'],0,strpos($_SERVER['REQUEST_URI'],'?'));
 					$this->getAccessToken($_GET['code']);	// this function assumes this passes
-					header('Location: ' . $_SESSION['page_target']);
+//					header('Location: ' . $_SESSION['page_target']);
 				}
 			}
 
 		}
 		else	// oauth already logged in
 		{
+			$twitch=$Auth->getConfigUrl($_SERVER['SERVER_NAME'] . $_SERVER['REQUEST_URI']);
+			require APP . 'view/_templates/header.php';
+			require APP . 'view/twitch/index.php';
+			require APP . 'view/_templates/footer.php';
 		}
 
-		require APP . 'view/_templates/header.php';
-		require APP . 'view/twitch/index.php';
-		require APP . 'view/_templates/footer.php';
 	}
 
 	public function logout()
 	{
 		require("SessionUtil.php");
                 $Auth=new Auth();
-		$Auth->clearAccessToken($_SESSION['user_id']);
+
+		$Auth->clearAccessToken($_SESSION['user_id'],$_SERVER['SERVER_NAME'] . $_SESSION['page_target']);
+
 		require APP . 'view/_templates/header.php';
 		require APP . 'view/twitch/logout.php';
 		require APP . 'view/_templates/footer.php';
 	}
 
-	private function getAccessToken($code)
+	private function getAccessToken($code=0)
 	{
                 $Auth=new Auth();
-		$twitch=$Auth->getConfig($_SERVER['SERVER_NAME'] . $_SERVER['REQUEST_URI']);
+		$twitch=$Auth->getConfigUrl($_SERVER['SERVER_NAME'] . $_SERVER['REQUEST_URI']);
 		$url="https://id.twitch.tv/oauth2/token?client_id=" . $twitch->client_id .
 			"&client_secret=" . $twitch->secret .
 			"&code=" . $code .
@@ -74,15 +76,33 @@ class TwitchController
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
 		$response = json_decode(curl_exec($ch));
 		curl_close($ch);
+
+/*
 		$twitchIdInfo=$this->getTwitchId($response->access_token);
 		$twitchLogin=$twitchIdInfo->login;
 		$twitchId=$twitchIdInfo->id;
-		$Auth->storeAccessToken($response->access_token,$response->refresh_token,$_SESSION['user_id'],$twitchLogin,$twitchId);
+*/
+
+//var_dump($response);
+//exit();
+
+/*
+echo $twitch->id . '<br>';
+echo $response->access_token . '<br>';
+echo $response->refresh_token . '<br>';
+echo $_SESSION['user_id'] . '<br>';
+exit();
+*/
+//var_dump($_SESSION);
+//exit();
+echo "storing";
+		$Auth->storeAccessToken($response->access_token,$response->refresh_token,$_GET['state']);
 	}
 
 
 
-	private function validateAccessToken()
+/*
+	private function validateAccessToken($user_id=0,$sec_key=0)
 	{
 
 		require("SessionUtil.php");
@@ -117,7 +137,7 @@ class TwitchController
 			return false;
 		}
 	}
-
+*/
 	private function getTwitchId($token)
 	{
 		$Auth=new Auth();
