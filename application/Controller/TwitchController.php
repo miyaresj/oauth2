@@ -155,9 +155,11 @@ echo "storing";
                         curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
                         curl_setopt($ch, CURLOPT_HTTPHEADER,array('Authorization: OAuth ' . $authCodes->access_token));
                         $response = json_decode(curl_exec($ch));
+                        curl_close($ch);
+
 //var_dump($response);
 //exit();
-                        curl_close($ch);
+
                         if (array_key_exists('status',$response))
                         {
                                 if ($response->status=="401")
@@ -223,8 +225,8 @@ echo "storing";
 			curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
 			curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($payload));
 			$response = curl_exec($ch);
-var_dump($response);
-exit();
+//var_dump($response);
+//exit();
 			$response = json_decode(curl_exec($ch));
 			curl_close($ch);
 			$twitchIdInfo=$this->getTwitchId($response->access_token);

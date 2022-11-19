@@ -72,7 +72,7 @@ class Auth extends AuthModel
 	public function isOauthSetRef($user_id=0,$url=0)
 	{
 
-		$sql = "SELECT LENGTH(A.access_token) as access_token, LENGTH(A.refresh_token) as refresh_token from auths A left join config B on B.url = :url where A.user_id = :user_id";
+                $sql = "SELECT LENGTH(A.access_token) as access_token, LENGTH(A.refresh_token) as refresh_token from auths A left join config B on A.config_id = B.id where A.user_id = :user_id and B.url = :url";
 		$query = $this->db->prepare($sql);
 		$parameters = array(':user_id' => $user_id, ':url' => $url);
 		$query->execute($parameters);
