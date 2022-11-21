@@ -16,7 +16,7 @@ class Auth extends AuthModel
 		return $query->fetch();
 	}
 
-	public function getConfigUrl($url)
+	public function getConfigUrl($user_id=0,$url=0)
 	{
 		if (strpos($url,"?"))
 		{
@@ -41,7 +41,6 @@ class Auth extends AuthModel
 	public function getUserById($id)
 	{
 		$sql = "SELECT user_id, email, salt, password, temppass, name, status, lastlogin, pwdset, created, updated from users where id = :id";
-//		$sql = "SELECT * from users where id = :id";
 		$query = $this->db->prepare($sql);
 		$parameters = array(':id' => $id);
 		$query->execute($parameters);
@@ -50,34 +49,46 @@ class Auth extends AuthModel
 
 	public function isOauthSet($user_id=0,$sec_key=0)
 	{
-
 		$sql = "SELECT LENGTH(access_token) as access_token, LENGTH(refresh_token) as refresh_token from auths where user_id = :user_id and sec_key = :sec_key";
 		$query = $this->db->prepare($sql);
 		$parameters = array(':user_id' => $user_id, ':sec_key' => $sec_key);
 		$query->execute($parameters);
 		$result=$query->fetch();
 
-		if (($result->access_token==0) || ($result->refresh_token==0))
-                {
+		if (($result->access_token)==0)
+		{
 			return false;
 		}
-		else
+
+
+		if (($result->refresh_token)==0)
 		{
-			return true;
+			return false;
 		}
 
-		return false;
+		return true;
+
 	}
 
 	public function isOauthSetRef($user_id=0,$url=0)
 	{
+/*
+echo $user_id;
+echo "<hr>";
+echo $url;
+echo "<hr>";
+*/
 
                 $sql = "SELECT LENGTH(A.access_token) as access_token, LENGTH(A.refresh_token) as refresh_token from auths A left join config B on A.config_id = B.id where A.user_id = :user_id and B.url = :url";
 		$query = $this->db->prepare($sql);
 		$parameters = array(':user_id' => $user_id, ':url' => $url);
 		$query->execute($parameters);
 		$result=$query->fetch();
-		if (($result->access_token==0) || ($result->refresh_token==0))
+
+//var_dump($result);
+//exit();
+
+		if (($result->access_token=="0") || ($result->refresh_token=="0"))
                 {
 			return false;
 		}
@@ -231,7 +242,10 @@ class Auth extends AuthModel
 	public function clearAccessToken($user_id=0,$url=0)
 	{
 
-		$cfg=$this->getConfigUrl($url);
+//echo $url;
+//exit();
+
+		$cfg=$this->getConfigUrl($user_id,$url);
                 $sql = "update auths A left join config B on A.config_id = B.id set access_token='', refresh_token='' where A.user_id = :user_id and A.config_id = :config_id";
 		$query = $this->db->prepare($sql);
 		$parameters = array(':user_id' => $user_id, ':config_id' => $cfg->id);

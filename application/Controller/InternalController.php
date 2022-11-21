@@ -27,6 +27,7 @@ class InternalController
 
 		$expires_in=$this->validateAccessToken($user_id,$sec_key);
 
+
 //var_dump($Auth->getUserOauthByLogin($user_id,$sec_key));
 //var_dump($expires_in);
 //exit();

@@ -13,13 +13,31 @@ class TwitchController
 		$Auth=new Auth();
 		$juser = $Auth->getUserById($_SESSION['user_id']);
 		$twitch=array();
-
-		if (!$Auth->isOauthSetRef($_SESSION['user_id'],$_SERVER['SERVER_NAME'] . $_SERVER['REQUEST_URI'])) // oauth not set
+		$uri=$_SERVER['REQUEST_URI'];
+		if (strpos($uri,'?'))
 		{
+			$uri=substr($uri,0,strpos($uri,'?'));
+		}
+
+/*
+echo $_SESSION['user_id'] . '<br>';
+echo $_SERVER['SERVER_NAME'] . '<br>';
+echo $_SERVER['REQUEST_URI'] . '<br>';
+echo $uri . 'xxx<br>';
+echo substr($_SERVER['REQUEST_URI'],0,strpos($_SERVER['REQUEST_URI'],'?')) . '<br>';
+echo $_SESSION['user_id'] . '<br>';
+exit();
+*/
+
+//		if (!$Auth->isOauthSetRef($_SESSION['user_id'],$_SERVER['SERVER_NAME'] . $_SERVER['REQUEST_URI'])) // oauth not set
+		if (!$Auth->isOauthSetRef($_SESSION['user_id'],$_SERVER['SERVER_NAME'] . $uri)) // oauth not set
+		{
+//echo "yo";
+//exit();
 			if (!isset($_GET["code"])) // redirect to twitch
 			{
-				$STATECODE=$Auth->setStateCode($_SESSION['user_id'],$_SERVER['SERVER_NAME'] . $_SERVER['REQUEST_URI']);
-				$twitch=$Auth->getConfigUrl($_SERVER['SERVER_NAME'] . $_SERVER['REQUEST_URI']);
+				$STATECODE=$Auth->setStateCode($_SESSION['user_id'],$_SERVER['SERVER_NAME'] . $uri);
+				$twitch=$Auth->getConfigUrl($_SESSION['user_id'],$_SERVER['SERVER_NAME'] . $uri);
 				require APP . 'view/_templates/header.php';
 				require APP . 'view/twitch/login.php';
 				require APP . 'view/_templates/footer.php';
@@ -33,8 +51,9 @@ class TwitchController
 				}
 				else	// State OK, Oauth2 login successful
 				{
-					$_SESSION['page_target']=substr($_SERVER['REQUEST_URI'],0,strpos($_SERVER['REQUEST_URI'],'?'));
+					$_SESSION['page_target']=$uri;
 					$this->getAccessToken($_GET['code']);	// this function assumes this passes
+//exit();
 					header('Location: ' . $_SESSION['page_target']);
 				}
 			}
@@ -42,7 +61,9 @@ class TwitchController
 		}
 		else	// oauth already logged in
 		{
-			$twitch=$Auth->getConfigUrl($_SERVER['SERVER_NAME'] . $_SERVER['REQUEST_URI']);
+			$twitch=$Auth->getConfigUrl($_SESSION['user_id'],$_SERVER['SERVER_NAME'] . $uri);
+//var_dump($twitch);
+//exit();
 			require APP . 'view/_templates/header.php';
 			require APP . 'view/twitch/index.php';
 			require APP . 'view/_templates/footer.php';
@@ -61,8 +82,17 @@ echo $_SERVER['HTTP_HOST'] . '<br>';
 echo $_SERVER['PHP_SELF'] . '<br>';
 exit();
 */
+		$uri=$_SERVER['REQUEST_URI'];
+		if (strpos($uri,'?'))
+		{
+			$uri=substr($uri,0,strpos($uri,'?'));
+		}
+		if (strpos($uri,'/',1))
+		{
+			$uri=substr($uri,0,strpos($uri,'/',1));
+		}
 
-		$Auth->clearAccessToken($_SESSION['user_id'],$_SERVER['SERVER_NAME'] . substr($_SERVER['REQUEST_URI'],0,strpos($_SERVER['REQUEST_URI'],'/',1)));
+		$Auth->clearAccessToken($_SESSION['user_id'],$_SERVER['SERVER_NAME'] . $uri);
 
 		require APP . 'view/_templates/header.php';
 		require APP . 'view/twitch/logout.php';
@@ -72,7 +102,12 @@ exit();
 	private function getAccessToken($code=0)
 	{
                 $Auth=new Auth();
-		$twitch=$Auth->getConfigUrl($_SERVER['SERVER_NAME'] . $_SERVER['REQUEST_URI']);
+		$uri=$_SERVER['REQUEST_URI'];
+		if (strpos($uri,'?'))
+		{
+			$uri=substr($uri,0,strpos($uri,'?'));
+		}
+		$twitch=$Auth->getConfigUrl($_SESSION['user_id'],$_SERVER['SERVER_NAME'] . $uri);
 		$url="https://id.twitch.tv/oauth2/token?client_id=" . $twitch->client_id .
 			"&client_secret=" . $twitch->secret .
 			"&code=" . $code .
@@ -157,10 +192,11 @@ echo "storing";
                         $response = json_decode(curl_exec($ch));
                         curl_close($ch);
 
-//var_dump($response);
+//print_r($response);
 //exit();
 
-                        if (array_key_exists('status',$response))
+//                        if (array_key_exists('status',$response))
+                        if (property_exists($response,'status'))
                         {
                                 if ($response->status=="401")
                                 {
@@ -211,7 +247,14 @@ echo "storing";
                 if ($Auth->isOauthSet($_SESSION['user_id']))
 		{
 			$authCodes=$Auth->getUserOauth($_SESSION['user_id']);
-			$twitch=$Auth->getConfig($_SERVER['SERVER_NAME'] . $_SERVER['REQUEST_URI']);
+
+			$uri=$_SERVER['REQUEST_URI'];
+			if (strpos($uri,'?'))
+			{
+				$uri=substr($uri,0,strpos($uri,'?'));
+			}
+
+			$twitch=$Auth->getConfig($_SERVER['SERVER_NAME'] . $uri);
 
 			$payload = [
 				'grant_type'=>'refresh_token',
