@@ -37,7 +37,7 @@ exit();
 			if (!isset($_GET["code"])) // redirect to twitch
 			{
 				$STATECODE=$Auth->setStateCode($_SESSION['user_id'],$_SERVER['SERVER_NAME'] . $uri);
-				$twitch=$Auth->getConfigUrl($_SESSION['user_id'],$_SERVER['SERVER_NAME'] . $uri);
+				$twitch=$Auth->getConfigUrl($_SERVER['SERVER_NAME'] . $uri);
 				require APP . 'view/_templates/header.php';
 				require APP . 'view/twitch/login.php';
 				require APP . 'view/_templates/footer.php';
@@ -61,7 +61,7 @@ exit();
 		}
 		else	// oauth already logged in
 		{
-			$twitch=$Auth->getConfigUrl($_SESSION['user_id'],$_SERVER['SERVER_NAME'] . $uri);
+			$twitch=$Auth->getConfigUrl($_SERVER['SERVER_NAME'] . $uri);
 //var_dump($twitch);
 //exit();
 			require APP . 'view/_templates/header.php';
@@ -107,7 +107,7 @@ exit();
 		{
 			$uri=substr($uri,0,strpos($uri,'?'));
 		}
-		$twitch=$Auth->getConfigUrl($_SESSION['user_id'],$_SERVER['SERVER_NAME'] . $uri);
+		$twitch=$Auth->getConfigUrl($_SERVER['SERVER_NAME'] . $uri);
 		$url="https://id.twitch.tv/oauth2/token?client_id=" . $twitch->client_id .
 			"&client_secret=" . $twitch->secret .
 			"&code=" . $code .
@@ -173,17 +173,10 @@ echo "storing";
         private function validateAccessToken($user_id=0,$config_id=0)
         {
 
-//echo $user_id . '<br>';
-//echo $config_id . '<br>';
-//exit();
                 $Auth=new Auth();
                 if ($Auth->isOauthSetConf($user_id,$config_id))
                 {
                         $authCodes=$Auth->getUserOauthConf($user_id,$config_id);
-
-//var_dump($authCodes);
-//exit();
-
 
                         $url="https://id.twitch.tv/oauth2/validate";
                         $ch = curl_init($url);

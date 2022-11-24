@@ -84,14 +84,14 @@ class InternalController
 			{
 				if ($response->status=="401")
 				{
-					return $this->refreshAccessToken($user_id);
+					return $this->refreshAccessToken($user_id,$sec_key);
 				}
 			}
 			else
 			{
 				if ($response->expires_in<600)
 				{
-					return $this->refreshAccessToken($user_id);
+					return $this->refreshAccessToken($user_id,$sec_key);
 				}
 			}
 			return $response->expires_in;
@@ -102,13 +102,13 @@ class InternalController
 		}
 	}
 
-	private function refreshAccessToken($user_id=0,$config_id=0)
+	private function refreshAccessToken($user_id=0,$sec_key=0)
 	{
 		$Auth=new Auth();
-                if ($Auth->isOauthSet($user_id))
+                if ($Auth->isOauthSet($user_id,$sec_key))
 		{
-			$authCodes=$Auth->getUserOauth($user_id);
-			$twitch=$Auth->getConfig("pi4b.lisabadcat.com/twitch");
+			$authCodes=$Auth->getUserOauth($user_id,$sec_key);
+			$twitch=$Auth->getConfigUrl("pi4b.lisabadcat.com/twitch");
 
 			$payload = [
 				'grant_type'=>'refresh_token',
@@ -124,7 +124,7 @@ class InternalController
 			$response = curl_exec($ch);
 			$response = json_decode(curl_exec($ch));
 			curl_close($ch);
-			$Auth->storeAccessTokenNoTwitch($response->access_token,$response->refresh_token,$user_id);
+			$Auth->storeAccessTokenNoTwitch($response->access_token,$response->refresh_token,$authCodes->id);
 			return $response->expires_in;
 		}
 		else

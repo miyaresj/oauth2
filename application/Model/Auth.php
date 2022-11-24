@@ -16,8 +16,9 @@ class Auth extends AuthModel
 		return $query->fetch();
 	}
 
-	public function getConfigUrl($user_id=0,$url=0)
+	public function getConfigUrl($url=0)
 	{
+
 		if (strpos($url,"?"))
 		{
 			$url=substr($url,0,strpos($url,"?"));
@@ -55,13 +56,20 @@ class Auth extends AuthModel
 		$query->execute($parameters);
 		$result=$query->fetch();
 
-		if (($result->access_token)==0)
+		@$AT=$result->access_token;
+		@$RT=$result->refresh_token;
+//echo $AT . "<br>";
+//echo $RT . "<br>";
+//var_dump($result);
+
+
+		if (@$result->access_token==0)
 		{
 			return false;
 		}
 
 
-		if (($result->refresh_token)==0)
+		if (@$result->refresh_token==0)
 		{
 			return false;
 		}
@@ -233,7 +241,7 @@ echo "<hr>";
 
 	public function storeAccessTokenNoTwitch($access_token,$refresh_token,$id)
 	{
-                $sql = "update users set access_token=:access_token, refresh_token=:refresh_token where id = :id";
+                $sql = "update auths set access_token=:access_token, refresh_token=:refresh_token where id = :id";
 		$query = $this->db->prepare($sql);
 		$parameters = array(':access_token' => $access_token, ':refresh_token' => $refresh_token, ':id' => $id );
 		$query->execute($parameters);
